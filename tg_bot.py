@@ -55,7 +55,6 @@ def handle_new_question_request(update: Update, context: CallbackContext) -> int
         db.get('question').decode('UTF-8'),
         reply_markup=markup,
     )
-    print(db.get('full_answer').decode('UTF-8'))
 
     return ANSWER
 

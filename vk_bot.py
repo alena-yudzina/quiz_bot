@@ -25,8 +25,6 @@ def create_question(db, quiz):
         }
     )
 
-    print(db.get('short_answer').decode('UTF-8'))
-
 
 def main():
     load_dotenv()
