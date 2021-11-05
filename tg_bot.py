@@ -90,6 +90,19 @@ def handle_give_up(update: Update, context: CallbackContext) -> int:
     handle_new_question_request(update, context)
 
 
+def done(update: Update, context: CallbackContext) -> int:
+
+    user_data = context.user_data
+
+    update.message.reply_text(
+        'Возвращайтесь еще!',
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    user_data.clear()
+    return ConversationHandler.END
+
+
 def main() -> None:
 
     load_dotenv()
@@ -109,7 +122,8 @@ def main() -> None:
                 MessageHandler(Filters.regex('^Сдаться$'), handle_give_up),
                 MessageHandler(Filters.text, handle_solution_attempt),
             ],
-        }
+        },
+        fallbacks=[MessageHandler(Filters.regex('^Done$'), done)], 
     )
 
     dispatcher.add_handler(conv_handler)
