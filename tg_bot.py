@@ -1,10 +1,11 @@
 import os
 import random
+from functools import partial
 
 import redis
 from dotenv import load_dotenv
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
-from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import (CommandHandler, ConversationHandler,
                           Filters, MessageHandler, Updater)
 
 from questions import create_quiz
@@ -16,15 +17,7 @@ REPLY_KEYBOARD = [['Новый вопрос', 'Сдаться'], ['Мой сче
 MARKUP = ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True)
 
 
-def start(update: Update, context: CallbackContext) -> int:
-    
-    context.bot_data['db'] = redis.Redis(
-        host=os.environ['REDIS_HOST'],
-        port=os.environ['REDIS_PORT'],
-        password=os.environ['REDIS_PASSWORD']
-    )
-
-    context.bot_data['quiz'] = create_quiz(os.environ['QUIZ_FOLDER'])
+def start(update, context):
 
     update.message.reply_text(
         'Привет! Я телеграм бот для викторины.',
@@ -34,13 +27,10 @@ def start(update: Update, context: CallbackContext) -> int:
     return QUESTION
 
 
-def handle_new_question_request(update: Update, context: CallbackContext) -> int:
+def handle_new_question_request(update, context, db, quiz):
 
     user = update.message.from_user['id']
-    quiz = context.bot_data['quiz']
     question = random.choice(list(quiz.keys()))
-    
-    db = context.bot_data['db']
     db.set(user, question)
 
     update.message.reply_text(
@@ -51,14 +41,12 @@ def handle_new_question_request(update: Update, context: CallbackContext) -> int
     return ANSWER
 
 
-def handle_solution_attempt(update: Update, context: CallbackContext) -> int:
+def handle_solution_attempt(update, context, db, quiz):
 
     user = update.message.from_user['id']
     answer = update.message.text
-
-    db = context.bot_data['db']
     question = db.get(user).decode('UTF-8')
-    correct_answer_full = context.bot_data['quiz'][question]
+    correct_answer_full = quiz[question]
     correct_answer_short = correct_answer_full.split('.', 1)[0]
     correct_answer_short = correct_answer_short.split('(', 1)[0]
 
@@ -76,21 +64,21 @@ def handle_solution_attempt(update: Update, context: CallbackContext) -> int:
         return ANSWER
 
 
-def handle_give_up(update: Update, context: CallbackContext) -> int:
+def handle_give_up(update, context, db, quiz):
 
     user = update.message.from_user['id']
-    db = context.bot_data['db']
     question = db.get(user).decode('UTF-8')
-    answer = context.bot_data['quiz'][question]
+    answer = quiz[question]
+    
     update.message.reply_text(
         'Правильный ответ:\n{0}'.format(answer),
         reply_markup=MARKUP,
     )
 
-    handle_new_question_request(update, context)
+    handle_new_question_request(update, context, db, quiz)
 
 
-def done(update: Update, context: CallbackContext) -> int:
+def done(update, context):
 
     user_data = context.user_data
 
@@ -103,10 +91,16 @@ def done(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 
-def main() -> None:
+def main():
 
     load_dotenv()
     bot_token = os.environ['BOT_TOKEN']
+    db = redis.Redis(
+        host=os.environ['REDIS_HOST'],
+        port=os.environ['REDIS_PORT'],
+        password=os.environ['REDIS_PASSWORD']
+    )
+    quiz = create_quiz(os.environ['QUIZ_FOLDER'])
 
     updater = Updater(bot_token)
 
@@ -116,11 +110,11 @@ def main() -> None:
         entry_points=[CommandHandler('start', start)],
         states={
             QUESTION: [
-                MessageHandler(Filters.regex('^Новый вопрос$'), handle_new_question_request),
+                MessageHandler(Filters.regex('^Новый вопрос$'), partial(handle_new_question_request, db=db, quiz=quiz)),
             ],
             ANSWER: [
-                MessageHandler(Filters.regex('^Сдаться$'), handle_give_up),
-                MessageHandler(Filters.text, handle_solution_attempt),
+                MessageHandler(Filters.regex('^Сдаться$'), partial(handle_give_up, db=db, quiz=quiz)),
+                MessageHandler(Filters.text, partial(handle_solution_attempt, db=db, quiz=quiz)),
             ],
         },
         fallbacks=[MessageHandler(Filters.regex('^Done$'), done)], 
