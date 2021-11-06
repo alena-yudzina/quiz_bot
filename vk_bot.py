@@ -34,7 +34,7 @@ def main():
         port=os.environ['REDIS_PORT'],
         password=os.environ['REDIS_PASSWORD']
     )
-    quiz = create_quiz()
+    quiz = create_quiz(os.environ['QUIZ_FOLDER'])
 
     vk_session = vk_api.VkApi(token=os.environ['VK_TOKEN'])
     vk = vk_session.get_api()

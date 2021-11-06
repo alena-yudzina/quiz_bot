@@ -24,7 +24,7 @@ def start(update: Update, context: CallbackContext) -> int:
         password=os.environ['REDIS_PASSWORD']
     )
 
-    context.bot_data['quiz'] = create_quiz()
+    context.bot_data['quiz'] = create_quiz(os.environ['QUIZ_FOLDER'])
 
     update.message.reply_text(
         'Привет! Я телеграм бот для викторины.',

@@ -1,4 +1,4 @@
-import re
+import os
 from itertools import zip_longest
 
 
@@ -7,15 +7,17 @@ def chunk(lst):
     return list(zip_longest(i_, i_))
 
 
-def create_quiz():
+def create_quiz(quiz_folder):
 
-    with open('quiz-questions/1vs1200.txt', 'r', encoding='KOI8-R') as f:
-        text = f.read()
-    
+    text = ''
+    for filename in os.listdir(quiz_folder):
+        with open(os.path.join(quiz_folder, filename), 'r', encoding='KOI8-R') as f:
+            text += f.read()
+
     sep_text = [part for part in text.split('\n\n')]
 
-    answers_and_questions = list(filter(lambda elem: 'Вопрос' in elem or 'Ответ' in elem, sep_text))
-    quiz_desc = []
+    answers_and_questions = list(filter(lambda elem: 'Вопрос' in elem or 'Ответ:' in elem, sep_text))
+
     quiz_desc = [
         {
             'question': pair[0].split('\n', 1)[1],
@@ -25,4 +27,3 @@ def create_quiz():
     ]
 
     return quiz_desc
-# print(create_quiz())
