@@ -36,35 +36,33 @@ def start(update: Update, context: CallbackContext) -> int:
 
 def handle_new_question_request(update: Update, context: CallbackContext) -> int:
 
+    user = update.message.from_user['id']
     quiz = context.bot_data['quiz']
     question = random.choice(list(quiz.keys()))
-
-    full_answer = quiz[question]
-    short_answer = full_answer.split('.', 1)[0]
-    short_answer = short_answer.split('(', 1)[0]
+    
     db = context.bot_data['db']
-    db.mset(
-        {
-            'question': question,
-            'short_answer': short_answer,
-            'full_answer': full_answer
-        }
-    )
+    db.set(user, question)
 
     update.message.reply_text(
-        db.get('question').decode('UTF-8'),
+        db.get(user).decode('UTF-8'),
         reply_markup=MARKUP,
     )
-    print(db.get('question').decode('UTF-8'), db.get('full_answer').decode('UTF-8')
-    )
+
     return ANSWER
 
 
 def handle_solution_attempt(update: Update, context: CallbackContext) -> int:
 
+    user = update.message.from_user['id']
     answer = update.message.text
+
     db = context.bot_data['db']
-    if answer.lower() == db.get('short_answer').decode('UTF-8').lower():
+    question = db.get(user).decode('UTF-8')
+    correct_answer_full = context.bot_data['quiz'][question]
+    correct_answer_short = correct_answer_full.split('.', 1)[0]
+    correct_answer_short = correct_answer_short.split('(', 1)[0]
+
+    if answer.lower() ==  correct_answer_short.lower():
         update.message.reply_text(
             'Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос".',
             reply_markup=MARKUP,
@@ -80,8 +78,10 @@ def handle_solution_attempt(update: Update, context: CallbackContext) -> int:
 
 def handle_give_up(update: Update, context: CallbackContext) -> int:
 
+    user = update.message.from_user['id']
     db = context.bot_data['db']
-    answer = db.get('full_answer').decode('UTF-8')
+    question = db.get(user).decode('UTF-8')
+    answer = context.bot_data['quiz'][question]
     update.message.reply_text(
         'Правильный ответ:\n{0}'.format(answer),
         reply_markup=MARKUP,

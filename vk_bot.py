@@ -9,20 +9,14 @@ from vk_api.longpoll import VkEventType, VkLongPoll
 from questions import create_quiz
 
 
-def create_question(db, quiz):
-
-    question = random.choice(list(quiz.keys()))
-    full_answer = quiz[question]
-    short_answer = full_answer.split('.', 1)[0]
+def make_short_answer(answer):
+    short_answer = answer.split('.', 1)[0]
     short_answer = short_answer.split('(', 1)[0]
+    return short_answer
 
-    db.mset(
-        {
-            'question': question,
-            'short_answer': short_answer,
-            'full_answer': full_answer
-        }
-    )
+
+def make_vk_id(user_id):
+    return ''.join(['vk_', str(user_id)])
 
 
 def main():
@@ -50,42 +44,56 @@ def main():
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             if event.text == 'Новый вопрос':
-                create_question(database, quiz)
+                user_id = event.user_id
+                vk_user_id = make_vk_id(user_id)
+                random_question = random.choice(list(quiz.keys()))
+                database.set(vk_user_id, random_question)
                 vk.messages.send(
-                    user_id=event.user_id,
-                    message=database.get('question').decode('UTF-8'),
+                    user_id=user_id,
+                    message=random_question,
+                    random_id=random.randint(1,1000),
+                    keyboard=keyboard.get_keyboard(),
+                )
+            elif event.text == 'Сдаться':
+                user_id = event.user_id
+                vk_user_id = make_vk_id(user_id)
+                question = database.get(vk_user_id).decode('UTF-8')
+                answer = quiz[question]
+                vk.messages.send(
+                    user_id=user_id,
+                    message=answer,
                     random_id=random.randint(1,1000),
                     keyboard=keyboard.get_keyboard()
                 )
-            if event.text == 'Сдаться':
+                random_question = random.choice(list(quiz.keys()))
+                database.set(vk_user_id, random_question)
                 vk.messages.send(
-                    user_id=event.user_id,
-                    message=database.get('full_answer').decode('UTF-8'),
+                    user_id=user_id,
+                    message=database.get(vk_user_id).decode('UTF-8'),
                     random_id=random.randint(1,1000),
                     keyboard=keyboard.get_keyboard()
                 )
-                create_question(database, quiz)
-                vk.messages.send(
-                    user_id=event.user_id,
-                    message=database.get('question').decode('UTF-8'),
-                    random_id=random.randint(1,1000),
-                    keyboard=keyboard.get_keyboard()
-                )
-            if event.text == database.get('short_answer').decode('UTF-8'):
-                vk.messages.send(
-                    user_id=event.user_id,
-                    message='Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос".',
-                    random_id=random.randint(1,1000),
-                    keyboard=keyboard.get_keyboard()
-                )
-            if event.text != 'Новый вопрос' and event.text != 'Сдаться' and event.text != database.get('short_answer').decode('UTF-8'):
-    
-                vk.messages.send(
-                    user_id=event.user_id,
-                    message='Неправильно… Попробуешь ещё раз?.',
-                    random_id=random.randint(1,1000),
-                    keyboard=keyboard.get_keyboard()
-                )
+            else:
+                message = event.text
+                user_id = event.user_id
+                vk_user_id = make_vk_id(user_id)
+                question = database.get(vk_user_id).decode('UTF-8')
+                correct_answer = make_short_answer(quiz[question])
+                if message == correct_answer:
+                    vk.messages.send(
+                        user_id=user_id,
+                        message="Правильно! Поздравляю! "
+                        "Для следующего вопроса нажми «Новый вопрос»",
+                        random_id=random.randint(1,1000),
+                        keyboard=keyboard.get_keyboard()
+                    )
+                else:
+                    vk.messages.send(
+                        user_id=user_id,
+                        message="Неправильно... Попробуешь ещё раз?",
+                        random_id=random.randint(1,1000),
+                        keyboard=keyboard.get_keyboard()
+                    )
 
 
 if __name__ == '__main__':
