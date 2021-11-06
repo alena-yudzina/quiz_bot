@@ -12,8 +12,8 @@ from questions import create_quiz
 
 QUESTION, ANSWER = range(2)
 
-reply_keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
-markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+REPLY_KEYBOARD = [['Новый вопрос', 'Сдаться'], ['Мой счет']]
+MARKUP = ReplyKeyboardMarkup(REPLY_KEYBOARD, one_time_keyboard=True)
 
 
 def start(update: Update, context: CallbackContext) -> int:
@@ -28,7 +28,7 @@ def start(update: Update, context: CallbackContext) -> int:
 
     update.message.reply_text(
         'Привет! Я телеграм бот для викторины.',
-        reply_markup=markup,
+        reply_markup=MARKUP,
     )
 
     return QUESTION
@@ -37,9 +37,9 @@ def start(update: Update, context: CallbackContext) -> int:
 def handle_new_question_request(update: Update, context: CallbackContext) -> int:
 
     quiz = context.bot_data['quiz']
-    question_with_answer = random.choice(quiz)
-    question = question_with_answer['question']
-    full_answer = question_with_answer['answer']
+    question = random.choice(list(quiz.keys()))
+
+    full_answer = quiz[question]
     short_answer = full_answer.split('.', 1)[0]
     short_answer = short_answer.split('(', 1)[0]
     db = context.bot_data['db']
@@ -53,9 +53,10 @@ def handle_new_question_request(update: Update, context: CallbackContext) -> int
 
     update.message.reply_text(
         db.get('question').decode('UTF-8'),
-        reply_markup=markup,
+        reply_markup=MARKUP,
     )
-
+    print(db.get('question').decode('UTF-8'), db.get('full_answer').decode('UTF-8')
+    )
     return ANSWER
 
 
@@ -66,13 +67,13 @@ def handle_solution_attempt(update: Update, context: CallbackContext) -> int:
     if answer.lower() == db.get('short_answer').decode('UTF-8').lower():
         update.message.reply_text(
             'Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос".',
-            reply_markup=markup,
+            reply_markup=MARKUP,
         )
         return QUESTION
     else:
         update.message.reply_text(
-            'Неправильно… Попробуешь ещё раз?.',
-            reply_markup=markup,
+            'Неправильно… Попробуешь ещё раз?',
+            reply_markup=MARKUP,
         )
         return ANSWER
 
@@ -83,7 +84,7 @@ def handle_give_up(update: Update, context: CallbackContext) -> int:
     answer = db.get('full_answer').decode('UTF-8')
     update.message.reply_text(
         'Правильный ответ:\n{0}'.format(answer),
-        reply_markup=markup,
+        reply_markup=MARKUP,
     )
 
     handle_new_question_request(update, context)

@@ -1,10 +1,16 @@
 import os
-from itertools import zip_longest
 
 
-def chunk(lst):
-    i_ = iter(lst)
-    return list(zip_longest(i_, i_))
+def parse_block(block):
+    result = {}
+    key = ''
+    block_lines = block.split('\n\n')
+    for line in block_lines:
+        if line.startswith('Вопрос'):
+            key = line.split(':', 1)[1].strip()
+        elif line.startswith('Ответ'):
+            result[key] = line.split(':', 1)[1].strip()
+    return result
 
 
 def create_quiz(quiz_folder):
@@ -14,16 +20,12 @@ def create_quiz(quiz_folder):
         with open(os.path.join(quiz_folder, filename), 'r', encoding='KOI8-R') as f:
             text += f.read()
 
-    sep_text = [part for part in text.split('\n\n')]
+    sep_text = text.split('\n\n\n')
 
-    answers_and_questions = list(filter(lambda elem: 'Вопрос' in elem or 'Ответ:' in elem, sep_text))
+    quiz_desc = {}
 
-    quiz_desc = [
-        {
-            'question': pair[0].split('\n', 1)[1],
-            'answer': pair[1].split('\n', 1)[1]
-        }
-        for pair in chunk(answers_and_questions)
-    ]
+    for block in sep_text:
+        parsed_block = parse_block(block)
+        quiz_desc.update(parsed_block)
 
     return quiz_desc

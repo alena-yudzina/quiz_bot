@@ -11,9 +11,8 @@ from questions import create_quiz
 
 def create_question(db, quiz):
 
-    question_with_answer = random.choice(quiz)
-    question = question_with_answer['question']
-    full_answer = question_with_answer['answer']
+    question = random.choice(list(quiz.keys()))
+    full_answer = quiz[question]
     short_answer = full_answer.split('.', 1)[0]
     short_answer = short_answer.split('(', 1)[0]
 
