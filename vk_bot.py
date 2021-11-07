@@ -15,10 +15,6 @@ def make_short_answer(answer):
     return short_answer
 
 
-def make_vk_id(user_id):
-    return ''.join(['vk_', str(user_id)])
-
-
 def main():
     load_dotenv()
 
@@ -45,7 +41,7 @@ def main():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             if event.text == 'Новый вопрос':
                 user_id = event.user_id
-                vk_user_id = make_vk_id(user_id)
+                vk_user_id = 'vk_{}'.format(user_id)
                 random_question = random.choice(list(quiz.keys()))
                 database.set(vk_user_id, random_question)
                 vk.messages.send(
@@ -56,7 +52,7 @@ def main():
                 )
             elif event.text == 'Сдаться':
                 user_id = event.user_id
-                vk_user_id = make_vk_id(user_id)
+                vk_user_id = 'vk_{}'.format(user_id)
                 question = database.get(vk_user_id).decode('UTF-8')
                 answer = quiz[question]
                 vk.messages.send(
@@ -76,7 +72,7 @@ def main():
             else:
                 message = event.text
                 user_id = event.user_id
-                vk_user_id = make_vk_id(user_id)
+                vk_user_id = 'vk_{}'.format(user_id)
                 question = database.get(vk_user_id).decode('UTF-8')
                 correct_answer = make_short_answer(quiz[question])
                 if message == correct_answer:

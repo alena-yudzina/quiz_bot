@@ -31,10 +31,11 @@ def handle_new_question_request(update, context, db, quiz):
 
     user = update.message.from_user['id']
     question = random.choice(list(quiz.keys()))
-    db.set(user, question)
+    tg_user_id = 'tg_{}'.format(user)
+    db.set(tg_user_id, question)
 
     update.message.reply_text(
-        db.get(user).decode('UTF-8'),
+        db.get(tg_user_id).decode('UTF-8'),
         reply_markup=MARKUP,
     )
 
@@ -44,8 +45,9 @@ def handle_new_question_request(update, context, db, quiz):
 def handle_solution_attempt(update, context, db, quiz):
 
     user = update.message.from_user['id']
+    tg_user_id = 'tg_{}'.format(user)
     answer = update.message.text
-    question = db.get(user).decode('UTF-8')
+    question = db.get(tg_user_id).decode('UTF-8')
     correct_answer_full = quiz[question]
     correct_answer_short = correct_answer_full.split('.', 1)[0]
     correct_answer_short = correct_answer_short.split('(', 1)[0]
@@ -67,7 +69,8 @@ def handle_solution_attempt(update, context, db, quiz):
 def handle_give_up(update, context, db, quiz):
 
     user = update.message.from_user['id']
-    question = db.get(user).decode('UTF-8')
+    tg_user_id = 'tg_{}'.format(user)
+    question = db.get(tg_user_id).decode('UTF-8')
     answer = quiz[question]
     
     update.message.reply_text(
